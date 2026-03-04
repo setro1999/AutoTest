@@ -1,4 +1,4 @@
-import subprocess, os, shutil, winreg
+import subprocess, os, winreg, time
 
 def find_and_uninstall_program(program_name):
     print(f"Поиск {program_name} для удаления...")
@@ -11,7 +11,14 @@ def find_and_uninstall_program(program_name):
                         with winreg.OpenKey(key, winreg.EnumKey(key, i)) as subkey:
                             try:
                                 if program_name.replace(".exe", "") in winreg.QueryValueEx(subkey, "DisplayName")[0]:
-                                    subprocess.run(winreg.QueryValueEx(subkey, "UninstallString")[0], shell=True)
+                                    uninstall_str = winreg.QueryValueEx(subkey, "UninstallString")[0]
+                                    if "msiexec" in uninstall_str.lower():
+                                        subprocess.run(f'msiexec /x {uninstall_str.split()[-1]} /quiet /norestart', shell=True)
+                                    else:
+                                        if uninstall_str.startswith('"'):
+                                            subprocess.run(f'{uninstall_str} /S /silent /quiet /verysilent', shell=True)
+                                        else:
+                                            subprocess.run(f'"{uninstall_str}" /S /silent /quiet /verysilent', shell=True)
                                     return True
                             except: pass
                         i += 1
@@ -24,7 +31,9 @@ def find_and_uninstall_program(program_name):
                 if program_name in filenames:
                     full_path = os.path.join(dirpath, program_name)
                     subprocess.run(f"taskkill /f /im {program_name}", shell=True, capture_output=True)
-                    try: os.remove(full_path); os.rmdir(dirpath)
+                    try: os.remove(full_path)
+                    except: pass
+                    try: os.rmdir(dirpath)
                     except: pass
                     return True
     return False

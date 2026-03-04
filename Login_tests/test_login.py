@@ -4,6 +4,8 @@ import time
 import os
 import pyautogui
 import sys
+import pyperclip
+import pydirectinput
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -53,8 +55,10 @@ def find_and_click(image_path, desc, timeout=30):
         try:
             loc = pyautogui.locateOnScreen(image_path)
             if loc:
-                pyautogui.click(pyautogui.center(loc))
+                center = pyautogui.center(loc)
+                pydirectinput.click(center.x, center.y)
                 logger.info(f"Найден: {desc}")
+                time.sleep(0.5)
                 return True
         except:
             pass
@@ -62,12 +66,28 @@ def find_and_click(image_path, desc, timeout=30):
     logger.error(f"Не найден: {desc}")
     return False
 
-def type_text(text):
-    for c in text:
-        pyautogui.typewrite(c)
+def type_text_direct(text):
+    """Прямой ввод через pydirectinput"""
+    for char in text:
+        if char == '.':
+            pydirectinput.press('.')
+        elif char == '@':
+            pydirectinput.keyDown('shift')
+            pydirectinput.press('2')
+            pydirectinput.keyUp('shift')
+        elif char == '-':
+            pydirectinput.press('-')
+        elif char == ':':
+            pydirectinput.keyDown('shift')
+            pydirectinput.press(';')
+            pydirectinput.keyUp('shift')
+        else:
+            pydirectinput.write(char)
         time.sleep(0.05)
+    logger.info(f"Текст введен")
 
 def clear():
+    """Очистка поля с использованием pyautogui для hotkey"""
     pyautogui.hotkey('ctrl', 'a')
     time.sleep(0.3)
     pyautogui.press('delete')
@@ -94,32 +114,38 @@ def test_login():
     subprocess.Popen([iva_path])
     time.sleep(15)
     
+    # Поле сервера
     if not find_and_click(IMAGES['server_field'], "поле сервера"):
         return False
     time.sleep(1)
     clear()
-    type_text(LOGIN_DATA['server'])
+    type_text_direct(LOGIN_DATA['server'])
     
+    # Кнопка продолжить
     if not find_and_click(IMAGES['continue_button'], "кнопка Продолжить"):
         return False
     time.sleep(5)
     
+    # Поле логина
     if not find_and_click(IMAGES['login_field'], "поле логина"):
         return False
     time.sleep(1)
     clear()
-    type_text(LOGIN_DATA['username'])
+    type_text_direct(LOGIN_DATA['username'])
     
-    pyautogui.press('tab')
+    # Поле пароля
+    pydirectinput.press('tab')
     time.sleep(1)
     clear()
-    type_text(LOGIN_DATA['password'])
-    time.sleep(1)
+    type_text_direct(LOGIN_DATA['password'])
     
-    pyautogui.press('enter')
+    time.sleep(1)
+    pydirectinput.press('enter')
     time.sleep(10)
     
-    result = subprocess.run('tasklist /FI "IMAGENAME eq IVA Connect.exe"', shell=True, capture_output=True, text=True)
+    # Проверка
+    result = subprocess.run('tasklist /FI "IMAGENAME eq IVA Connect.exe"', 
+                          shell=True, capture_output=True, text=True)
     
     if "IVA Connect.exe" in result.stdout:
         logger.info("=" * 50)

@@ -1,0 +1,14 @@
+# .env файлы с секретами
+.env
+*.env
+.env.*
+
+# Логи и временные файлы
+logs/
+__pycache__/
+*.log
+*.pyc
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,8 @@
+python-dotenv
+pyautogui
+pyperclip
+pydirectinput
+pygetwindow
+opencv-python
+allure-pytest
+pytest

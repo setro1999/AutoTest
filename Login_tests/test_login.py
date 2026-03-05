@@ -4,7 +4,6 @@ import time
 import os
 import pyautogui
 import sys
-import pyperclip
 import pydirectinput
 from datetime import datetime
 from dotenv import load_dotenv
@@ -48,115 +47,119 @@ IMAGES = {
     'login_button': os.path.join(script_dir, 'images', 'login_button.png')
 }
 
-def find_and_click(image_path, desc, timeout=30):
-    logger.info(f"Поиск: {desc}")
-    start = time.time()
-    while time.time() - start < timeout:
-        try:
-            loc = pyautogui.locateOnScreen(image_path)
-            if loc:
-                center = pyautogui.center(loc)
-                pydirectinput.click(center.x, center.y)
-                logger.info(f"Найден: {desc}")
-                time.sleep(0.5)
-                return True
-        except:
-            pass
-        time.sleep(1)
-    logger.error(f"Не найден: {desc}")
-    return False
-
-def type_text_direct(text):
-    """Прямой ввод через pydirectinput"""
-    for char in text:
-        if char == '.':
-            pydirectinput.press('.')
-        elif char == '@':
-            pydirectinput.keyDown('shift')
-            pydirectinput.press('2')
-            pydirectinput.keyUp('shift')
-        elif char == '-':
-            pydirectinput.press('-')
-        elif char == ':':
-            pydirectinput.keyDown('shift')
-            pydirectinput.press(';')
-            pydirectinput.keyUp('shift')
-        else:
-            pydirectinput.write(char)
-        time.sleep(0.05)
-    logger.info(f"Текст введен")
-
-def clear():
-    """Очистка поля с использованием pyautogui для hotkey"""
-    pyautogui.hotkey('ctrl', 'a')
-    time.sleep(0.3)
-    pyautogui.press('delete')
-    time.sleep(0.3)
-
-def test_login():
-    logger.info("=" * 50)
-    logger.info("ТЕСТ АВТОРИЗАЦИИ")
-    logger.info("=" * 50)
+class TestIVALogin:
     
-    for name, path in IMAGES.items():
-        if not os.path.exists(path):
-            logger.error(f"Нет файла: {path}")
+    def find_and_click(self, image_path, desc, timeout=30):
+        logger.info(f"Поиск: {desc}")
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                loc = pyautogui.locateOnScreen(image_path, confidence=0.7)
+                if loc:
+                    center = pyautogui.center(loc)
+                    pydirectinput.click(center.x, center.y)
+                    logger.info(f"Найден: {desc}")
+                    time.sleep(1)
+                    return True
+            except:
+                pass
+            time.sleep(1)
+        
+        logger.error(f"Не найден: {desc}")
+        return False
+    
+    def type_text_direct(self, text, field_desc):
+        """Прямой ввод текста через pydirectinput"""
+        logger.info(f"Ввод в {field_desc}: {text}")
+        
+        # Очищаем поле
+        pydirectinput.hotkey('ctrl', 'a')
+        time.sleep(0.5)
+        pydirectinput.press('delete')
+        time.sleep(0.5)
+        
+        # Вводим текст посимвольно
+        for char in text:
+            if char == '@':
+                pydirectinput.keyDown('shift')
+                pydirectinput.press('2')
+                pydirectinput.keyUp('shift')
+            elif char == '.':
+                pydirectinput.press('.')
+            elif char == '-':
+                pydirectinput.press('-')
+            else:
+                pydirectinput.write(char)
+            time.sleep(0.05)
+        
+        logger.info(f"✅ Текст введен")
+    
+    def test_login(self):
+        logger.info("=" * 50)
+        logger.info("ТЕСТ АВТОРИЗАЦИИ")
+        logger.info("=" * 50)
+        
+        # Завершаем старые процессы
+        subprocess.run("taskkill /f /im IVA*.exe", shell=True, capture_output=True)
+        time.sleep(3)
+        
+        # Запуск программы
+        iva_path = "C:\\Program Files\\IVA Connect\\IVA Connect.exe"
+        if not os.path.exists(iva_path):
+            logger.error("Программа не найдена")
             return False
-    
-    subprocess.run("taskkill /f /im IVA*.exe", shell=True, capture_output=True)
-    time.sleep(2)
-    
-    iva_path = "C:\\Program Files\\IVA Connect\\IVA Connect.exe"
-    if not os.path.exists(iva_path):
-        logger.error("Программа не найдена")
-        return False
-    
-    subprocess.Popen([iva_path])
-    time.sleep(15)
-    
-    # Поле сервера
-    if not find_and_click(IMAGES['server_field'], "поле сервера"):
-        return False
-    time.sleep(1)
-    clear()
-    type_text_direct(LOGIN_DATA['server'])
-    
-    # Кнопка продолжить
-    if not find_and_click(IMAGES['continue_button'], "кнопка Продолжить"):
-        return False
-    time.sleep(5)
-    
-    # Поле логина
-    if not find_and_click(IMAGES['login_field'], "поле логина"):
-        return False
-    time.sleep(1)
-    clear()
-    type_text_direct(LOGIN_DATA['username'])
-    
-    # Поле пароля
-    pydirectinput.press('tab')
-    time.sleep(1)
-    clear()
-    type_text_direct(LOGIN_DATA['password'])
-    
-    time.sleep(1)
-    pydirectinput.press('enter')
-    time.sleep(10)
-    
-    # Проверка
-    result = subprocess.run('tasklist /FI "IMAGENAME eq IVA Connect.exe"', 
-                          shell=True, capture_output=True, text=True)
-    
-    if "IVA Connect.exe" in result.stdout:
-        logger.info("=" * 50)
-        logger.info("ТЕСТ УСПЕШЕН")
-        logger.info("=" * 50)
-        return True
-    else:
-        logger.error("=" * 50)
-        logger.error("ТЕСТ ПРОВАЛЕН")
-        logger.error("=" * 50)
-        return False
+        
+        subprocess.Popen([iva_path])
+        logger.info("Программа запущена, ожидание 20 секунд...")
+        time.sleep(20)
+        
+        # Ввод сервера
+        if not self.find_and_click(IMAGES['server_field'], "поле сервера"):
+            return False
+        time.sleep(2)
+        self.type_text_direct(LOGIN_DATA['server'], "сервер")
+        time.sleep(2)
+        
+        # Кнопка продолжить
+        if not self.find_and_click(IMAGES['continue_button'], "кнопка Продолжить"):
+            return False
+        time.sleep(5)
+        
+        # Ввод логина
+        if not self.find_and_click(IMAGES['login_field'], "поле логина"):
+            return False
+        time.sleep(2)
+        self.type_text_direct(LOGIN_DATA['username'], "логин")
+        time.sleep(2)
+        
+        # Ввод пароля
+        pydirectinput.press('tab')
+        time.sleep(2)
+        self.type_text_direct(LOGIN_DATA['password'], "пароль")
+        time.sleep(2)
+        
+        # Нажатие кнопки Войти
+        if not self.find_and_click(IMAGES['login_button'], "кнопка Войти", timeout=10):
+            logger.warning("Кнопка Войти не найдена, пробуем Enter")
+            pydirectinput.press('enter')
+        
+        time.sleep(10)
+        
+        # Проверка
+        result = subprocess.run('tasklist /FI "IMAGENAME eq IVA Connect.exe"', 
+                              shell=True, capture_output=True, text=True)
+        
+        if "IVA Connect.exe" in result.stdout:
+            logger.info("=" * 50)
+            logger.info("ТЕСТ УСПЕШЕН")
+            logger.info("=" * 50)
+            return True
+        else:
+            logger.error("=" * 50)
+            logger.error("ТЕСТ ПРОВАЛЕН")
+            logger.error("=" * 50)
+            return False
 
 if __name__ == "__main__":
-    test_login()
+    test = TestIVALogin()
+    test.test_login()
